@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* VESTIGE is a dark-only instrument surface; app tokens keep shadcn primitives
+   aligned with the archive palette defined in archive-theme.css. */
+
+@layer base {
+  :root {
+    --background: 220 62% 5%;
+    --foreground: 218 100% 96%;
+
+    --card: 218 51% 10%;
+    --card-foreground: 218 100% 96%;
+
+    --popover: 219 55% 8%;
+    --popover-foreground: 218 100% 96%;
+
+    --primary: 219 100% 59%;
+    --primary-foreground: 210 100% 98%;
+
+    --secondary: 219 45% 16%;
+    --secondary-foreground: 218 100% 96%;
+
+    --muted: 219 45% 16%;
+    --muted-foreground: 215 27% 66%;
+
+    --accent: 190 100% 65%;
+    --accent-foreground: 220 62% 8%;
+
+    --destructive: 219 42% 55%;
+    --destructive-foreground: 210 100% 98%;
+
+    --border: 220 48% 20%;
+    --input: 220 48% 20%;
+    --ring: 190 100% 65%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 220 60% 6%;
+    --sidebar-foreground: 215 27% 78%;
+    --sidebar-primary: 219 100% 59%;
+    --sidebar-primary-foreground: 210 100% 98%;
+    --sidebar-accent: 219 45% 15%;
+    --sidebar-accent-foreground: 218 100% 96%;
+    --sidebar-border: 220 48% 20%;
+    --sidebar-ring: 190 100% 65%;
+  }
+
+  .dark {
+    --background: 220 62% 5%;
+    --foreground: 218 100% 96%;
+
+    --card: 218 51% 10%;
+    --card-foreground: 218 100% 96%;
+
+    --popover: 219 55% 8%;
+    --popover-foreground: 218 100% 96%;
+
+    --primary: 219 100% 59%;
+    --primary-foreground: 210 100% 98%;
+
+    --secondary: 219 45% 16%;
+    --secondary-foreground: 218 100% 96%;
+
+    --muted: 219 45% 16%;
+    --muted-foreground: 215 27% 66%;
+
+    --accent: 190 100% 65%;
+    --accent-foreground: 220 62% 8%;
+
+    --destructive: 219 42% 55%;
+    --destructive-foreground: 210 100% 98%;
+
+    --border: 220 48% 20%;
+    --input: 220 48% 20%;
+    --ring: 190 100% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
