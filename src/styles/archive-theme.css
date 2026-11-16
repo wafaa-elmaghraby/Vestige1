@@ -391,11 +391,13 @@ body {
   font-family: var(--font-sans);
 }
 
-/* NASA Trek basemaps ship warm regolith tones. Cool the raster tiles into the
-   archive palette so the map matches the blue identity without hiding terrain. */
-.leaflet-tile-pane {
-  filter: grayscale(1) brightness(0.78) contrast(1.18) sepia(0.42) hue-rotate(176deg)
-    saturate(1.5);
+/* Keep Mars natural rust-terracotta while toning Moon tiles into silvery slate. */
+[data-world='Mars'] .leaflet-tile-pane {
+  filter: brightness(0.92) contrast(1.12) saturate(1.15);
+}
+
+[data-world='Moon'] .leaflet-tile-pane {
+  filter: grayscale(1) brightness(0.86) contrast(1.18);
 }
 
 .leaflet-popup-content-wrapper,
