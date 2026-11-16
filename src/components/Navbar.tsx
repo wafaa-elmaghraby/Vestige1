@@ -45,11 +45,6 @@ const BrandMark: React.FC<{ compact?: boolean }> = ({ compact = false }) => (
   </span>
 );
 
-/**
- * Responsive navigation: a fixed instrument dock on wide screens and a slim
- * top bar with a full-height sheet below 1280px. Section state is tracked so
- * the rail always reflects the current chapter.
- */
 export const Navbar: React.FC<NavbarProps> = ({ onWorldChange, activeWorld = 'Mars' }) => {
   const { t, language, setLanguage } = useT();
   const [scrolled, setScrolled] = useState(false);
@@ -129,9 +124,31 @@ export const Navbar: React.FC<NavbarProps> = ({ onWorldChange, activeWorld = 'Ma
 
   return (
     <>
-      {/* ================= Desktop instrument dock ================= */}
-      <aside className="fixed inset-y-0 start-0 z-[100] hidden w-[76px] flex-col justify-between border-e border-[color:var(--line)] bg-[rgba(6,12,24,0.92)] backdrop-blur-xl xl:flex">
-        <div className="flex flex-col items-center gap-8 pt-6">
+      <div
+        className="fixed top-5 end-6 z-[100] hidden items-center overflow-hidden rounded-full border border-[color:var(--line-strong)] bg-[rgba(6,12,24,0.88)] p-0.5 backdrop-blur-xl shadow-[0_12px_30px_-14px_rgba(0,0,0,0.8)] xl:flex"
+        role="group"
+        aria-label={t.nav.language}
+      >
+        {LANGUAGES.map((option) => (
+          <button
+            key={option.code}
+            onClick={() => handleLanguageChange(option.code)}
+            aria-pressed={language === option.code}
+            lang={option.code}
+            className={`rounded-full px-3 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.06em] transition-colors ${
+              language === option.code
+                ? 'bg-[color:var(--blue)] text-[color:var(--ink)]'
+                : 'text-[color:var(--ink-2)] hover:text-[color:var(--ink)]'
+            }`}
+            title={option.label}
+          >
+            {option.code === 'ar' ? 'عربي' : 'EN'}
+          </button>
+        ))}
+      </div>
+
+      <aside className="fixed inset-y-0 start-0 z-[100] hidden w-[76px] flex-col justify-between overflow-y-auto border-e border-[color:var(--line)] bg-[rgba(6,12,24,0.92)] backdrop-blur-xl xl:flex">
+        <div className="flex flex-col items-center gap-5 pt-4">
           <a href="#top" className="group flex flex-col items-center gap-3" aria-label="VESTIGE home">
             <BrandMark compact />
             <span
@@ -151,7 +168,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onWorldChange, activeWorld = 'Ma
                   href={`#${id}`}
                   onClick={() => spaceAudio.playTelemetryBeep(1100, 0.03)}
                   aria-current={active ? 'true' : undefined}
-                  className={`dock-link group relative flex w-full flex-col items-center gap-1.5 py-2.5 transition-colors ${
+                  className={`dock-link group relative flex w-full flex-col items-center gap-1 py-2 transition-colors ${
                     active
                       ? 'text-[color:var(--cyan)]'
                       : 'text-[color:var(--ink-3)] hover:text-[color:var(--ink)]'
@@ -234,7 +251,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onWorldChange, activeWorld = 'Ma
         </div>
       </aside>
 
-      {/* ================= Mobile / tablet top bar ================= */}
       <header
         className={`fixed inset-x-0 top-0 z-[100] border-b transition-all duration-300 xl:hidden ${
           scrolled || isMenuOpen
@@ -248,6 +264,28 @@ export const Navbar: React.FC<NavbarProps> = ({ onWorldChange, activeWorld = 'Ma
           </a>
 
           <div className="flex items-center gap-2">
+            <div
+              className="flex overflow-hidden rounded-full border border-[color:var(--line)] bg-[rgba(6,12,24,0.7)]"
+              role="group"
+              aria-label={t.nav.language}
+            >
+              {LANGUAGES.map((option) => (
+                <button
+                  key={option.code}
+                  onClick={() => handleLanguageChange(option.code)}
+                  aria-pressed={language === option.code}
+                  lang={option.code}
+                  className={`px-2.5 py-1.5 font-mono text-[10px] uppercase transition-colors ${
+                    language === option.code
+                      ? 'bg-[color:var(--surface-2)] text-[color:var(--cyan)]'
+                      : 'text-[color:var(--ink-3)] hover:text-[color:var(--ink)]'
+                  }`}
+                  title={option.label}
+                >
+                  {option.code === 'ar' ? 'عربي' : 'EN'}
+                </button>
+              ))}
+            </div>
             <button
               onClick={toggleSound}
               aria-label={isMuted ? t.nav.soundOn : t.nav.soundOff}
@@ -270,7 +308,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onWorldChange, activeWorld = 'Ma
         </div>
       </header>
 
-      {/* ================= Mobile sheet ================= */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-[99] xl:hidden">
           <div
