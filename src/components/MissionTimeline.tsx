@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { missionsData } from '../data/missionsData';
 import { Mission, Destination } from '../types/mission';
@@ -19,7 +19,13 @@ interface MissionTimelineProps {
  */
 export const MissionTimeline: React.FC<MissionTimelineProps> = ({ onSelectMission, selectedWorld }) => {
   const { t, localize } = useT();
-  const [filter, setFilter] = useState<'all' | Destination>('all');
+  const [filter, setFilter] = useState<'all' | Destination>(selectedWorld ?? 'all');
+
+  useEffect(() => {
+    if (selectedWorld) {
+      setFilter(selectedWorld);
+    }
+  }, [selectedWorld]);
 
   const missions = useMemo(
     () =>
@@ -34,9 +40,15 @@ export const MissionTimeline: React.FC<MissionTimelineProps> = ({ onSelectMissio
     [missions, filter]
   );
 
-  const [activeId, setActiveId] = useState<string>(missions[0]?.id ?? '');
-  const activeMission = missions.find((m) => m.id === activeId) ?? missions[0];
+  const [activeId, setActiveId] = useState<string>(visible[0]?.id ?? missions[0]?.id ?? '');
 
+  useEffect(() => {
+    if (visible.length > 0 && !visible.some((m) => m.id === activeId)) {
+      setActiveId(visible[0].id);
+    }
+  }, [visible, activeId]);
+
+  const activeMission = visible.find((m) => m.id === activeId) ?? visible[0] ?? missions[0];
   const filterOptions: Array<{ id: 'all' | Destination; label: string }> = [
     { id: 'all', label: t.timeline.filterAll },
     { id: 'Moon', label: t.timeline.filterMoon },
