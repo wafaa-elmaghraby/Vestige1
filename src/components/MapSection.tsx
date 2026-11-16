@@ -5,7 +5,7 @@ import { Mission, Destination } from '../types/mission';
 import { spaceAudio } from '../utils/audio';
 import { useT } from '../i18n/LanguageContext';
 import { spanStart } from '../utils/nasa';
-import { MapPin, Globe, Compass, Layers, Navigation } from 'lucide-react';
+import { MapPin, Layers, Navigation } from 'lucide-react';
 import { SectionHeading } from './SectionHeading';
 
 interface MapSectionProps {
@@ -27,13 +27,13 @@ export const MapSection: React.FC<MapSectionProps> = ({
   const markersByIdRef = useRef<Record<string, L.Marker>>({});
 
   const [selectedPinMission, setSelectedPinMission] = useState<Mission | null>(null);
+  const onSelectMissionRef = useRef(onSelectMission);
+  onSelectMissionRef.current = onSelectMission;
 
-  // Filter missions for the active planetary world that have valid numeric coordinates
   const worldMissions = missionsData.filter(
     (m) => m.destination === activeWorld && m.coordinates.latNum !== undefined && m.coordinates.lonNum !== undefined
   );
 
-  // Tile endpoints configuration
   const tileConfigs = {
     Moon: {
       url: 'https://trek.nasa.gov/tiles/Moon/EQ/LRO_WAC_Mosaic_Global_303ppd_v02/1.0.0/default/default028mm/{z}/{y}/{x}.jpg',
@@ -41,16 +41,16 @@ export const MapSection: React.FC<MapSectionProps> = ({
       attribution: 'NASA Moon Trek / LRO WAC Global Mosaic (USGS / NASA)',
       maxZoom: 7,
       minZoom: 1,
-      center: [10, 15] as [number, number],
+      center: [8, 12] as [number, number],
       zoom: 2,
     },
     Mars: {
-      url: 'https://trek.nasa.gov/tiles/Mars/EQ/Mars_MGS_MOLA_ClrShade_merge_global_463m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg',
-      fallbackUrl: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Crect width='256' height='256' fill='%2306101f'/%3E%3Cpath d='M0 64H256M0 128H256M0 192H256M64 0V256M128 0V256M192 0V256' stroke='%231e3a5f' stroke-width='0.5' opacity='0.4'/%3E%3C/svg%3E",
-      attribution: 'NASA Mars Trek / MGS MOLA & Viking MDIM (NASA / JPL / USGS)',
+      url: 'https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg',
+      fallbackUrl: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Crect width='256' height='256' fill='%23180b08'/%3E%3Cpath d='M0 64H256M0 128H256M0 192H256M64 0V256M128 0V256M192 0V256' stroke='%2359271a' stroke-width='0.5' opacity='0.45'/%3E%3C/svg%3E",
+      attribution: 'NASA Mars Trek / Viking MDIM2.1 Global Color Mosaic (NASA / JPL / USGS)',
       maxZoom: 7,
       minZoom: 1,
-      center: [5, 50] as [number, number],
+      center: [5, 40] as [number, number],
       zoom: 2,
     },
   };
@@ -61,55 +61,84 @@ export const MapSection: React.FC<MapSectionProps> = ({
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
-    markersByIdRef.current = {};
 
-    // Destroy previous map instance if exists
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-    }
-
-    const cfg = tileConfigs[activeWorld];
-
-    // Initialize Leaflet map
     const map = L.map(mapContainerRef.current, {
-      center: cfg.center,
-      zoom: cfg.zoom,
-      minZoom: cfg.minZoom,
-      maxZoom: cfg.maxZoom,
+      crs: L.CRS.EPSG4326,
+      center: tileConfigs[activeWorld].center,
+      zoom: tileConfigs[activeWorld].zoom,
+      minZoom: 1,
+      maxZoom: 7,
+      maxBounds: [
+        [-90, -180],
+        [90, 180],
+      ],
+      maxBoundsViscosity: 0.9,
       zoomControl: false,
       attributionControl: false,
     });
 
-    // Add zoom control at bottom-right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
+    const markersLayer = L.layerGroup().addTo(map);
 
-    // Primary NASA Trek Tile layer with fallback
+    mapInstanceRef.current = map;
+    markersLayerRef.current = markersLayer;
+
+    const raf = requestAnimationFrame(() => map.invalidateSize());
+
+    return () => {
+      cancelAnimationFrame(raf);
+      map.remove();
+      mapInstanceRef.current = null;
+      markersLayerRef.current = null;
+      tileLayerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const cfg = tileConfigs[activeWorld];
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+      tileLayerRef.current = null;
+    }
+
     const tileLayer = L.tileLayer(cfg.url, {
       attribution: cfg.attribution,
+      minZoom: cfg.minZoom,
       maxZoom: cfg.maxZoom,
       noWrap: true,
+      bounds: [
+        [-90, -180],
+        [90, 180],
+      ],
       errorTileUrl: cfg.fallbackUrl,
     });
 
     tileLayer.addTo(map);
     tileLayerRef.current = tileLayer;
+    map.setView(cfg.center, cfg.zoom, { animate: false });
+    map.invalidateSize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorld]);
 
-    // Layer group for pins
-    const markersLayer = L.layerGroup().addTo(map);
-    markersLayerRef.current = markersLayer;
-    mapInstanceRef.current = map;
+  useEffect(() => {
+    const markersLayer = markersLayerRef.current;
+    if (!markersLayer) return;
 
-    // Add markers
+    markersLayer.clearLayers();
+    markersByIdRef.current = {};
+
     worldMissions.forEach((mission) => {
       const lat = mission.coordinates.latNum!;
       const lon = mission.coordinates.lonNum!;
 
       const isMars = mission.destination === 'Mars';
-      const markerColor = isMars ? '#4fd8ff' : '#7b8bff';
-      const pulseColor = isMars ? 'rgba(239, 68, 68, 0.4)' : 'rgba(56, 189, 248, 0.4)';
+      const markerColor = isMars ? '#ff8e64' : '#4fd8ff';
+      const pulseColor = isMars ? 'rgba(255, 142, 100, 0.42)' : 'rgba(79, 216, 255, 0.4)';
 
-      // Custom HTML Marker Icon
       const customIcon = L.divIcon({
         className: 'custom-nasa-pin',
         html: `
@@ -125,18 +154,16 @@ export const MapSection: React.FC<MapSectionProps> = ({
 
       const marker = L.marker([lat, lon], { icon: customIcon });
 
-      // Localized strings for popup
       const missionTypeName = localize(mission.type);
       const missionName = localize(mission.name);
       const locName = localize(mission.locationName);
       const worldName = isMars ? t.worldSelector.marsTitle : t.worldSelector.moonTitle;
       const dossierBtnText = t.map.fullDossierBtn;
 
-      // Popup Content with Clean Dark Aerospace Typography & High Contrast
       const popupHtml = `
         <div style="background-color: #090d16; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-width: 220px; padding: 2px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
-            <span style="font-size: 10px; font-family: monospace; font-weight: 700; text-transform: uppercase; color: ${isMars ? '#f87171' : '#4fd8ff'}; letter-spacing: 0.05em;">
+            <span style="font-size: 10px; font-family: monospace; font-weight: 700; text-transform: uppercase; color: ${isMars ? '#ff8e64' : '#4fd8ff'}; letter-spacing: 0.05em;">
               ${missionTypeName} · ${worldName}
             </span>
             <span style="font-size: 10px; font-family: monospace; color: #cbd5e1; background: #1e293b; padding: 1px 6px; border-radius: 4px; font-weight: 600;">
@@ -170,7 +197,7 @@ export const MapSection: React.FC<MapSectionProps> = ({
           if (btn) {
             btn.onclick = () => {
               spaceAudio.playTelemetryBeep(1400, 0.05);
-              onSelectMission(mission);
+              onSelectMissionRef.current(mission);
             };
           }
         }, 50);
@@ -179,13 +206,7 @@ export const MapSection: React.FC<MapSectionProps> = ({
       markersByIdRef.current[mission.id] = marker;
       marker.addTo(markersLayer);
     });
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorld, language]);
 
   const handleFocusMission = (m: Mission) => {
@@ -193,7 +214,7 @@ export const MapSection: React.FC<MapSectionProps> = ({
     spaceAudio.playTelemetryBeep(1200, 0.04);
     setSelectedPinMission(m);
     mapInstanceRef.current.flyTo([m.coordinates.latNum, m.coordinates.lonNum], 4, {
-      duration: 1.2,
+      duration: 1.0,
     });
     markersByIdRef.current[m.id]?.openPopup();
   };
@@ -226,32 +247,29 @@ export const MapSection: React.FC<MapSectionProps> = ({
           }
         />
 
-        {/* Map Viewport Container */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Main Leaflet Canvas */}
-          <div className="lg:col-span-8 relative rounded-xl border border-[color:var(--line)] overflow-hidden bg-[color:var(--surface)] shadow-2xl">
-            {/* Top Toolbar Overlay */}
+          <div
+            data-world={activeWorld}
+            className="lg:col-span-8 relative rounded-xl border border-[color:var(--line)] overflow-hidden bg-[color:var(--surface)] shadow-2xl"
+          >
             <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-[color:var(--surface)]/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-[color:var(--line)] text-xs font-mono text-[color:var(--ink-2)]">
               <Layers className="w-3.5 h-3.5 text-[color:var(--cyan)]" />
               <span>
-                {activeWorld === 'Mars' ? 'Mars Trek (MOLA)' : 'Moon Trek (LRO WAC)'}
+                {activeWorld === 'Mars' ? 'Mars Trek (Viking Color)' : 'Moon Trek (LRO WAC)'}
               </span>
             </div>
 
-            {/* Coordinates / Compass HUD overlay */}
             <div className="absolute bottom-3 left-3 z-20 hidden sm:flex items-center gap-2 bg-[color:var(--surface)]/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-[color:var(--line)] text-[11px] font-mono text-[color:var(--ink-2)]">
               <Navigation className="w-3 h-3 text-[color:var(--cyan)]" />
               <span>{t.map.clickToView}</span>
             </div>
 
-            {/* Actual Map Container */}
             <div
               ref={mapContainerRef}
               className="w-full h-[460px] sm:h-[560px] z-0 cursor-grab active:cursor-grabbing"
             />
           </div>
 
-          {/* Right Sidebar: Quick Location Focus Cards */}
           <div className="lg:col-span-4 space-y-2.5 max-h-[560px] overflow-y-auto pr-1">
             <div className="text-xs font-mono uppercase tracking-wider text-[color:var(--ink-2)] mb-2 flex items-center gap-2 px-1">
               <MapPin className="w-3.5 h-3.5 text-[color:var(--cyan)]" />
